@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Daemon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>try{if(localStorage.getItem('daemon-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark')}}catch(e){}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  /* LIGHT — Astou default: calm intelligence, soft violet-tinted white */
+  :root{
+    --bg:#f5f6fb;
+    --surface:#ffffff;
+    --surface-2:#eef0f9;
+    --border:#dbdfef;
+    --border-soft:#e6e9f5;
+
+    --text:#161c2e;
+    --muted:#5b6a95;
+    --muted-dim:#8d97ba;
+
+    --yale:#084b83;
+    --baby-blue:#91c4f2;
+    --wisteria:#8ca0d7;
+    --smoke:#9d79bc;
+    --amethyst:#a14da0;
+
+    --accent:var(--yale);
+    --accent-dim:#0f5fa0;
+    --depth:var(--wisteria);
+    --diagnosis:#6e4d8a;
+    --signature:#7d3a7c;
+    --on-accent:#f7f8fc;
+
+    --up:#1a7a4c;
+    --down:#c92a2a;
+    --warn:#8a6d00;
+
+    --font-display:'Ubuntu',sans-serif;
+    --font-body:'Manrope',sans-serif;
+    --font-mono:'IBM Plex Mono',monospace;
+
+    --radius-sm:6px;
+    --radius-md:10px;
+    --radius-lg:16px;
+  }
+
+  /* DARK — Astou terminal: neutral ashy grey, opt-in */
+  [data-theme='dark']{
+    --bg:#111111;
+    --surface:#1a1a1a;
+    --surface-2:#222222;
+    --border:#2e2e2e;
+    --border-soft:#272727;
+
+    --text:#e8e8e8;
+    --muted:#999999;
+    --muted-dim:#666666;
+
+    --accent:var(--baby-blue);
+    --accent-dim:var(--wisteria);
+    --diagnosis:var(--smoke);
+    --signature:var(--amethyst);
+    --depth:var(--yale);
+    --on-accent:#111111;
+
+    --up:#7fd4a8;
+    --down:#ff6b6b;
+    --warn:#e8c84a;
+  }
+
+  html{height:100%}
+  body{
+    background:var(--bg);
+    background-image:
+      radial-gradient(ellipse 1200px 800px at 20% -10%, rgba(145,196,242,0.05), transparent),
+      radial-gradient(ellipse 1000px 700px at 100% 10%, rgba(161,77,160,0.04), transparent);
+    color:var(--text);
+    font-family:var(--font-body);
+    font-size:14px;
+    line-height:1.6;
+    height:100vh;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 1.25rem;height:56px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+  .logo{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-size:17px;font-weight:700;letter-spacing:-0.01em;color:var(--text)}
+  .logo-icon{width:28px;height:28px;background:var(--text);color:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:14px;font-weight:700}
+  .nav-tabs{display:flex;gap:2px}
+  .nav-tab{padding:7px 14px;border-radius:var(--radius-sm);border:none;background:transparent;color:var(--muted);font-family:var(--font-body);font-size:13px;font-weight:500;cursor:pointer;transition:color .15s,background .15s}
+  .nav-tab:hover{color:var(--text);background:var(--surface-2)}
+  .nav-tab.active{color:var(--accent);background:var(--surface-2)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--up);box-shadow:0 0 6px rgba(26,122,76,0.6)}
+
+  .view{display:none;flex:1;overflow:hidden;flex-direction:column}
+  .view.active{display:flex}
+
+  /* CHAT */
+  .chat-messages{flex:1;overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1rem}
+  .msg{display:flex;gap:10px;max-width:780px}
+  .msg.user{flex-direction:row-reverse;align-self:flex-end}
+  .msg-avatar{width:28px;height:28px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:12px;font-weight:700;margin-top:2px}
+  .msg.daemon .msg-avatar{background:var(--accent);color:var(--on-accent)}
+  .msg.user .msg-avatar{background:var(--surface-2);color:var(--muted);font-family:var(--font-body);font-weight:500;font-size:11px}
+  .msg-bubble{padding:12px 16px;border-radius:var(--radius-md);line-height:1.65;max-width:calc(100% - 40px);font-family:var(--font-body);font-size:14px}
+  .msg.daemon .msg-bubble{background:var(--surface);border:1px solid var(--border);color:var(--text);min-width:180px}
+  .msg.user .msg-bubble{background:var(--surface-2);border:1px solid var(--border);color:var(--text)}
+  .msg-bubble h1,.msg-bubble h2,.msg-bubble h3{margin:.75rem 0 .4rem;font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.01em}
+  .msg-bubble p{margin-bottom:.6rem}
+  .msg-bubble p:last-child{margin-bottom:0}
+  .msg-bubble ul,.msg-bubble ol{margin:.4rem 0 .6rem 1.2rem}
+  .msg-bubble li{margin-bottom:.25rem}
+  .msg-bubble strong{color:var(--text);font-weight:600}
+  .msg-bubble code{background:var(--bg);padding:2px 6px;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:12px;border:1px solid var(--border-soft)}
+  .msg-bubble pre{background:var(--bg);padding:12px;border-radius:var(--radius-sm);overflow-x:auto;margin:.6rem 0;border:1px solid var(--border-soft)}
+  .msg-bubble pre code{background:none;padding:0;border:none}
+  .msg-actions{display:flex;gap:6px;margin-top:6px}
+  .msg-action{font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--font-body)}
+  .msg-action:hover{color:var(--accent);border-color:var(--accent)}
+  .thinking{color:var(--muted);font-style:italic;animation:pulse 1.5s infinite;display:block;min-width:160px}
+  @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+  .quick-actions{display:flex;gap:6px;flex-wrap:wrap;padding:0 1.5rem .75rem}
+  .quick{font-size:11px;padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-family:var(--font-body);font-weight:500;transition:color .15s,border-color .15s}
+  .quick:hover{color:var(--accent);border-color:var(--accent)}
+  .chat-input-row{padding:1rem 1.5rem calc(1rem + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--surface);display:flex;gap:10px;align-items:flex-end;flex-shrink:0}
+  .chat-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:11px 14px;color:var(--text);font-family:var(--font-body);font-size:14px;resize:none;outline:none;min-height:44px;max-height:120px;line-height:1.5}
+  .chat-input:focus{border-color:var(--accent)}
+  .chat-input::placeholder{color:var(--muted-dim)}
+  .send-btn{background:var(--accent);border:none;border-radius:var(--radius-md);width:44px;height:44px;cursor:pointer;color:var(--on-accent);font-family:var(--font-mono);font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s}
+  .send-btn:hover{opacity:.85}
+
+  /* STATUS */
+  .scroll-view{padding:1.5rem;overflow-y:auto;flex:1}
+  .sec-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:1.5rem}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:1rem}
+  .stat-label{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .stat-value{font-size:26px;font-weight:600}
+  .stat-sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .row-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem}
+  .row-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+  .row-name{font-weight:500}
+  .row-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .badge{font-size:11px;padding:2px 8px;border-radius:20px}
+  .badge.running{background:rgba(26,122,76,0.12);color:var(--up)}
+  .badge.stopped{background:#2a1515;color:var(--down)}
+  .row-stats{font-size:11px;color:var(--muted);text-align:right}
+  .sth{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+  .ghost-btn{font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:4px;padding:3px 10px;cursor:pointer;font-family:var(--font-body)}
+  .ghost-btn:hover{color:var(--accent);border-color:var(--accent)}
+
+  /* NOTES */
+  .note-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:1rem;margin-bottom:10px}
+  .note-resource{font-family:var(--font-body);font-size:11px;font-weight:600;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+  .note-text{font-family:var(--font-body);line-height:1.6;color:var(--text)}
+  .note-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+  .note-date{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+  .note-acts{display:flex;gap:8px}
+  .del-btn{font-family:var(--font-body);font-size:11px;font-weight:500;color:var(--down);background:none;border:none;cursor:pointer}
+  .add-form{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:1.25rem;margin-bottom:1rem;display:none}
+  .empty{color:var(--muted);text-align:center;padding:3rem;line-height:1.8;font-family:var(--font-body)}
+
+  /* SETUP */
+  .setup-outer{flex:1;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:2.5rem 1rem}
+  .setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;width:100%;max-width:520px;box-shadow:0 1px 2px rgba(22,28,46,0.04)}
+  [data-theme='dark'] .setup-card{box-shadow:none}
+  .step-track{display:flex;gap:6px;margin-bottom:2rem}
+  .pip{flex:1;height:3px;border-radius:999px;background:var(--border);transition:background .3s}
+  .pip.done{background:var(--accent)}
+  .sh{font-family:var(--font-display);font-size:20px;font-weight:700;letter-spacing:-0.01em;color:var(--text);margin-bottom:.5rem}
+  .ss{color:var(--muted);font-family:var(--font-body);font-size:13px;margin-bottom:1.5rem;line-height:1.7}
+  .field{margin-bottom:1rem}
+  .field label{display:block;font-family:var(--font-body);font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em}
+  .field input,.field select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;transition:border-color .15s}
+  .field input:focus,.field select:focus{border-color:var(--accent)}
+  .field input::placeholder{color:var(--muted-dim)}
+  .hint{font-family:var(--font-body);font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6}
+
+  /* choice cards */
+  .choices{display:flex;flex-direction:column;gap:10px;margin-bottom:1rem}
+  .choice{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s}
+  .choice:hover{border-color:var(--accent)}
+  .choice.selected{border-color:var(--accent);background:var(--surface-2)}
+  .choice-title{font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--text)}
+  .choice-sub{font-family:var(--font-body);font-size:12px;color:var(--muted);margin-top:4px;line-height:1.55}
+  .choice.selected .choice-sub{color:var(--text)}
+
+  /* model picker */
+  .model-grid{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem}
+  .model-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-md);padding:12px 14px;cursor:pointer;transition:border-color .15s;display:flex;align-items:center;justify-content:space-between}
+  .model-card:hover{border-color:var(--accent)}
+  .model-card.selected{border-color:var(--accent);background:var(--surface-2)}
+  .model-name{font-family:var(--font-body);font-size:13px;font-weight:600;color:var(--text)}
+  .model-desc{font-family:var(--font-body);font-size:11px;color:var(--muted);margin-top:3px}
+  .model-card.selected .model-desc{color:var(--text)}
+  .model-size{font-family:var(--font-mono);font-size:11px;color:var(--muted);text-align:right;white-space:nowrap;margin-left:10px}
+
+  /* pull progress */
+  .pull-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-family:var(--font-mono);font-size:11px;color:var(--muted);min-height:60px;max-height:140px;overflow-y:auto;display:none;margin-bottom:1rem;line-height:1.7}
+  .pull-box.active{display:block}
+  .pull-done{color:var(--up)}
+  .pull-err{color:var(--down)}
+
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-soft)}
+  .toggle-row:last-child{border-bottom:none}
+  .tgl-label{font-family:var(--font-body);font-size:13px;font-weight:600;color:var(--text)}
+  .tgl-sub{font-family:var(--font-body);font-size:11px;color:var(--muted);margin-top:3px;line-height:1.55}
+  .tgl-detected{font-family:var(--font-body);font-size:11px;font-weight:500;color:var(--up);margin-top:3px}
+  .toggle{width:38px;height:22px;border-radius:999px;background:var(--border);border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+  .toggle.on{background:var(--accent)}
+  .toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--on-accent);transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,0.15)}
+  .toggle.on::after{transform:translateX(16px)}
+  [data-theme='dark'] .toggle::after{background:#e8e8e8}
+  [data-theme='dark'] .toggle.on::after{background:var(--on-accent)}
+  .collapsible{overflow:hidden;max-height:0;transition:max-height .3s ease}
+  .collapsible.open{max-height:700px}
+
+  .btn-row{display:flex;gap:10px;margin-top:1.5rem}
+  .btn{padding:11px 22px;border-radius:var(--radius-md);border:none;cursor:pointer;font-family:var(--font-body);font-size:13px;font-weight:600;transition:opacity .15s,background .15s}
+  .btn-primary{background:var(--accent);color:var(--on-accent);flex:1}
+  .btn-primary:hover{opacity:.9}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+  .btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+  .divider{border:none;border-top:1px solid var(--border-soft);margin:1rem 0}
+  .success-icon{font-family:var(--font-display);font-size:44px;font-weight:700;text-align:center;margin-bottom:1rem;color:var(--accent)}
+  .access-box{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px}
+  .access-url{font-family:var(--font-mono);font-size:13px;color:var(--accent);margin-bottom:4px}
+  .access-sub{font-family:var(--font-body);font-size:11px;color:var(--muted);line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo"><div class="logo-icon">D</div>daemon</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('chat',this)">Chat</button>
+    <button class="nav-tab" onclick="showView('status',this)">Status</button>
+    <button class="nav-tab" onclick="showView('notes',this)">Notes</button>
+    <button class="nav-tab" onclick="showView('setup',this)">Setup</button>
+  </div>
+  <div class="topbar-right">
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle theme">-</button>
+    <div class="dot" title="Daemon running"></div>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div class="view active" id="view-chat">
+  <div class="chat-messages" id="chat-messages">
+    <div class="msg daemon">
+      <div class="msg-avatar">D</div>
+      <div><div class="msg-bubble">I can see your homelab and answer questions about it in plain English.
+
+Try a quick action below, or ask me anything.</div></div>
+    </div>
+  </div>
+  <div class="quick-actions">
+    <button class="quick" onclick="quickAsk('give me a health summary of my homelab')">health check</button>
+    <button class="quick" onclick="quickAsk('what containers are currently running')">containers</button>
+    <button class="quick" onclick="quickAsk('what is using the most resources right now')">resource hogs</button>
+    <button class="quick" onclick="quickAsk('is anything down or unhealthy')">anything broken</button>
+    <button class="quick" onclick="quickAsk('summarize everything running in my homelab')">full summary</button>
+  </div>
+  <div class="chat-input-row">
+    <textarea class="chat-input" id="chat-input" placeholder="ask your homelab anything..." rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+    <button class="send-btn" onclick="sendMessage()">Send</button>
+  </div>
+</div>
+
+<!-- STATUS -->
+<div class="view" id="view-status">
+  <div class="scroll-view">
+    <div class="sth"><div class="sec-title">Homelab Status</div><button class="ghost-btn" onclick="refreshStatus()">Refresh</button></div>
+    <div class="stat-grid" id="stat-cards"><div class="empty">Loading...</div></div>
+    <div class="sec-title">Containers</div>
+    <div class="row-list" id="container-list"></div>
+    <div class="sec-title" id="vm-title" style="display:none">VMs</div>
+    <div class="row-list" id="vm-list"></div>
+  </div>
+</div>
+
+<!-- NOTES -->
+<div class="view" id="view-notes">
+  <div class="scroll-view">
+    <div class="sth"><div class="sec-title">Sticky Notes</div><button class="ghost-btn" onclick="toggleAddNote()">+ add note</button></div>
+    <div class="add-form" id="add-form">
+      <div class="field"><label>Note</label><input id="new-note-text" placeholder="remember to..."></div>
+      <div class="field"><label>Resource (optional)</label><input id="new-note-res" placeholder="plex, proxmox, nginx..."></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="addNote()">Save</button>
+        <button class="btn btn-ghost" onclick="toggleAddNote()">Cancel</button>
+      </div>
+    </div>
+    <div id="notes-list"></div>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div class="view" id="view-setup">
+  <div class="setup-outer"><div class="setup-card" id="setup-card"></div></div>
+</div>
+
+<script>
+const API = '';
+let msgN = 0;
+
+// ── VIEWS ──
+function showView(name, tab) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  if (tab) tab.classList.add('active');
+  if (name === 'status') refreshStatus();
+  if (name === 'notes') loadNotes();
+  if (name === 'setup') renderSetup();
+}
+
+// ── CHAT ──
+function addMsg(role, text, id) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  if (id) div.id = id;
+  div.dataset.text = text;
+  const avatar = role === 'daemon' ? 'D' : 'you';
+  const actions = (role === 'daemon' && id) ? `<div class="msg-actions">
+    <button class="msg-action" onclick="pinMsg('${id}')">Pin</button>
+    <button class="msg-action" onclick="emailMsg('${id}')">Email</button>
+  </div>` : '';
+  div.innerHTML = `<div class="msg-avatar">${avatar}</div>
+    <div style="max-width:calc(100% - 40px)">
+      <div class="msg-bubble" id="bubble-${id||''}">${role === 'daemon' ? marked.parse(text) : text}</div>${actions}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+function quickAsk(q) { document.getElementById('chat-input').value = q; sendMessage(); }
+async function sendMessage() {
+  const inp = document.getElementById('chat-input');
+  const q = inp.value.trim(); if (!q) return;
+  inp.value = ''; inp.style.height = 'auto';
+  addMsg('user', q);
+  const tid = 'think-' + (++msgN);
+  addMsg('daemon', '<span class="thinking">thinking...</span>', tid);
+  try {
+    const res = await fetch(`${API}/api/query?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    const aid = 'ans-' + (++msgN);
+    document.getElementById(tid).remove();
+    const el = addMsg('daemon', data.answer || data.error || 'No response.', aid);
+    el.dataset.question = q; el.dataset.answer = data.answer || '';
+  } catch(e) {
+    document.getElementById('bubble-' + tid).innerHTML = 'Cannot reach Daemon. Is the server running?';
+    document.getElementById('bubble-' + tid).style.color = 'var(--down)';
+  }
+}
+async function pinMsg(id) {
+  const el = document.getElementById(id);
+  const text = `Q: ${el.dataset.question}\nA: ${el.dataset.answer}`;
+  await fetch(`${API}/api/notes`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+  const b = el.querySelector('.msg-action'); b.textContent='Pinned'; setTimeout(()=>b.textContent='Pin',2000);
+}
+async function emailMsg(id) {
+  const el = document.getElementById(id);
+  const text = `Q: ${el.dataset.question}\nA: ${el.dataset.answer}`;
+  await fetch(`${API}/api/notes`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,send_email:true})});
+  const bs = el.querySelectorAll('.msg-action'); bs[1].textContent='Sent'; setTimeout(()=>bs[1].textContent='Email',2000);
+}
+
+// ── STATUS ──
+async function refreshStatus() {
+  try {
+    const data = await (await fetch(`${API}/api/status`)).json();
+    const cards = document.getElementById('stat-cards');
+    const cl = document.getElementById('container-list');
+    const vl = document.getElementById('vm-list');
+    cards.innerHTML = ''; cl.innerHTML = ''; vl.innerHTML = '';
+    if (data.docker) {
+      const d = data.docker;
+      cards.innerHTML += `<div class="stat-card"><div class="stat-label">Docker</div><div class="stat-value">${d.running}</div><div class="stat-sub">${d.running} running · ${d.stopped} stopped</div></div>`;
+      d.containers.forEach(c => {
+        const s = c.stats?.cpu_pct !== undefined ? `CPU ${c.stats.cpu_pct}% · RAM ${c.stats.mem_usage_mb}MB` : '';
+        cl.innerHTML += `<div class="row-item"><div><div class="row-name">${c.name}</div><div class="row-sub">${c.image}</div></div><div style="text-align:right"><span class="badge ${c.status==='running'?'running':'stopped'}">${c.status}</span>${s?`<div class="row-stats">${s}</div>`:''}</div></div>`;
+      });
+    }
+    if (data.proxmox) {
+      const p = data.proxmox;
+      cards.innerHTML += `<div class="stat-card"><div class="stat-label">Proxmox VMs</div><div class="stat-value">${p.vms_running}</div><div class="stat-sub">${p.vms_running} running · ${p.vms_stopped} stopped</div></div>`;
+      document.getElementById('vm-title').style.display = 'block';
+      (p.vms||[]).forEach(v => { vl.innerHTML += `<div class="row-item"><div><div class="row-name">VM ${v.vmid} — ${v.name||'unnamed'}</div><div class="row-sub">${v.node}</div></div><span class="badge ${v.status==='running'?'running':'stopped'}">${v.status}</span></div>`; });
+    }
+    if (!data.docker && !data.proxmox) cards.innerHTML = '<div class="empty">No integrations enabled.<br>Go to Setup to configure Daemon.</div>';
+  } catch(e) { document.getElementById('stat-cards').innerHTML = '<div class="empty" style="color:var(--down)">Cannot reach Daemon API.</div>'; }
+}
+
+// ── NOTES ──
+function toggleAddNote() { const f=document.getElementById('add-form'); f.style.display=f.style.display==='block'?'none':'block'; }
+async function loadNotes() {
+  try {
+    const notes = await (await fetch(`${API}/api/notes`)).json();
+    const list = document.getElementById('notes-list');
+    if (!notes.length) { list.innerHTML='<div class="empty">No notes yet.<br>Pin answers from chat or add one manually.</div>'; return; }
+    list.innerHTML = notes.map(n => `<div class="note-card" id="note-${n.id}">
+      ${n.resource?`<div class="note-resource">${n.resource}</div>`:''}
+      <div class="note-text">${n.text}</div>
+      <div class="note-footer"><div class="note-date">${(n.created||'').slice(0,10)}</div>
+      <div class="note-acts">
+        <button class="ghost-btn" onclick="emailNote(${n.id})">Email</button>
+        <button class="del-btn" onclick="deleteNote(${n.id})">delete</button>
+      </div></div></div>`).join('');
+  } catch(e) {}
+}
+async function addNote() {
+  const text = document.getElementById('new-note-text').value.trim(); if (!text) return;
+  const resource = document.getElementById('new-note-res').value.trim();
+  await fetch(`${API}/api/notes`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,resource:resource||null})});
+  document.getElementById('new-note-text').value=''; document.getElementById('new-note-res').value='';
+  toggleAddNote(); loadNotes();
+}
+async function deleteNote(id) { await fetch(`${API}/api/notes/${id}`,{method:'DELETE'}); loadNotes(); }
+async function emailNote(id) {
+  const text = document.getElementById('note-'+id).querySelector('.note-text').textContent;
+  await fetch(`${API}/api/notes`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,send_email:true})});
+  const btn = document.querySelector(`#note-${id} .ghost-btn`);
+  btn.textContent='Sent'; setTimeout(()=>btn.textContent='Email',2000);
+}
+
+// ── SETUP WIZARD ──
+let step = 0;
+let cfg = {};
+// ai sub-choices
+let aiHost = null;   // 'cloud' | 'local'
+let cloudPath = null; // 'daemon' | 'own'
+let cloudProvider = null; // 'openai' | 'anthropic'
+let localPath = null; // 'ollama' | 'custom'
+let selectedModel = null;
+
+const MODELS = [
+  { id:'llama3.2:8b-instruct',    name:'Llama 3.2 3B',    desc:'Tiny and fast. Good for simple questions.',                      size:'~2GB',  tag:'fast'    },
+  { id:'llama-3.1-8b-instruct',    name:'Llama 3.1 8B',    desc:'Recommended. Great balance of speed and accuracy.',              size:'~5GB',  tag:'recommended' },
+  { id:'qwen3.5:27b',     name:'Qwen 3 27B',       desc:'Strong reasoning. Good alternative to Llama.',                  size:'~4GB',  tag:'strong'        },
+  { id:'llama3.1:70b',   name:'Llama 3.1 70B',   desc:'Much smarter. Needs at least 48GB RAM or a good GPU.',          size:'~40GB', tag:'powerful' },
+  { id:'llama3.1:405b',  name:'Llama 3.1 405B',  desc:'Maximum intelligence. Requires serious hardware.',               size:'~230GB',tag:'beast'   },
+];
+
+const SMTP_PRESETS = {
+  gmail:   {host:'smtp.gmail.com',        port:465,enc:'ssl', hint:'Use a Gmail App Password — not your real password. Get one at myaccount.google.com - Security → App passwords.'},
+  outlook: {host:'smtp-mail.outlook.com', port:587,enc:'tls', hint:'Use your Outlook password or an app password if 2FA is on.'},
+  yahoo:   {host:'smtp.mail.yahoo.com',   port:465,enc:'ssl', hint:'Requires a Yahoo App Password. Enable at account.yahoo.com - Security.'},
+  postfix: {host:'localhost',             port:25, enc:'none',hint:'Postfix on localhost. Leave username and password blank.'},
+  custom:  {host:'',                      port:587,enc:'tls', hint:'Enter your SMTP server details manually.'},
+};
+
+// steps: access, ai-host, ai-detail, integrations, email, done
+const TOTAL_STEPS = 6;
+
+function pip(n) {
+  return Array.from({length:n},(_,i)=>`<div class="pip ${i<=step?'done':''}"></div>`).join('');
+}
+
+function renderSetup() {
+  const card = document.getElementById('setup-card');
+  if (step === 0) card.innerHTML = stepAccess();
+  else if (step === 1) card.innerHTML = stepAiHost();
+  else if (step === 2) card.innerHTML = stepAiDetail();
+  else if (step === 3) card.innerHTML = stepIntegrations();
+  else if (step === 4) card.innerHTML = stepEmail();
+  else card.innerHTML = stepDone();
+}
+
+function nav(showBack=true, nextLabel='Continue', nextDisabled=false) {
+  return `<div class="btn-row">
+    ${showBack && step>0 ? `<button class="btn btn-ghost" onclick="prevStep()">Back</button>` : ''}
+    <button class="btn btn-primary" onclick="nextStep()" ${nextDisabled?'disabled':''} id="next-btn">${nextLabel}</button>
+  </div>`;
+}
+
+// step zero: access method 
+function stepAccess() { return `
+  <div class="step-track">${pip(TOTAL_STEPS)}</div>
+  <div class="sh">Where do you want to access Daemon?</div>
+  <div class="ss">Daemon runs entirely on your machine. Your homelab data stays local. Only AI queries go out — directly to your provider, nowhere else.</div>
+  <div class="hint" style="margin-bottom:1rem">Daemon itself never connects to the internet. The only outbound connection is your AI query going directly to your chosen provider — nothing else leaves your machine.</div>
+  <div class="choices">
+    <div class="choice ${cfg.bind==='127.0.0.1'||!cfg.bind?'selected':''}" onclick="selectAccess('127.0.0.1',this)">
+      <div class="choice-title">This device only</div>
+      <div class="choice-sub">Access Daemon at localhost:6789 on this machine only. Good for most people.</div>
+    </div>
+    <div class="choice ${cfg.bind==='0.0.0.0'?'selected':''}" onclick="selectAccess('0.0.0.0',this)">
+      <div class="choice-title">Other devices on my network</div>
+      <div class="choice-sub">Access Daemon from your phone, tablet, or another computer on the same WiFi or LAN. Still fully local — only your AI queries go out to your provider.</div>
+    </div>
+  </div>
+  ${nav(false)}
+`; }
+function selectAccess(val, el) {
+  document.querySelectorAll('#setup-card .choice').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected'); cfg.bind = val;
+}
+
+// STEP 1 cloud or local
+function stepAiHost() { return `
+  <div class="step-track">${pip(TOTAL_STEPS)}</div>
+  <div class="sh">How are you running AI?</div>
+  <div class="ss">Daemon works with cloud AI providers or fully local models on your own hardware. Pick what fits your setup.</div>
+  <div class="choices">
+    <div class="choice ${aiHost==='cloud'?'selected':''}" onclick="selectAiHost('cloud',this)">
+      <div class="choice-title">Cloud</div>
+      <div class="choice-sub">OpenRouter or a Daemon cloud token. Fast, no hardware needed. Typical homelab usage costs $1-3/month.</div>
+    </div>
+    <div class="choice ${aiHost==='local'?'selected':''}" onclick="selectAiHost('local',this)">
+      <div class="choice-title">Local (self-hosted)</div>
+      <div class="choice-sub">Run AI entirely on your own hardware. Zero API costs, fully private. Needs a capable machine.</div>
+    </div>
+  </div>
+  ${nav()}
+`; }
+function selectAiHost(val, el) {
+  document.querySelectorAll('#setup-card .choice').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected'); aiHost = val;
+}
+
+// step 2 details about ai
+function stepAiDetail() {
+  if (aiHost === 'cloud') return stepCloud();
+  return stepLocal();
+}
+
+function stepCloud() { return `
+  <div class="step-track">${pip(TOTAL_STEPS)}</div>
+  <div class="sh">Cloud AI setup</div>
+  <div class="ss">Your key is saved locally and goes directly to the provider. Daemon never sees it.</div>
+  <div class="choices" style="margin-bottom:1rem">
+    <div class="choice ${cloudPath==='daemon'?'selected':''}" onclick="selectCloudPath('daemon',this)">
+      <div class="choice-title">I have a Daemon token</div>
+      <div class="choice-sub">Purchased Daemon? Paste your token and you're done — no provider account needed.</div>
+    </div>
+    <div class="choice ${cloudPath==='own'?'selected':''}" onclick="selectCloudPath('own',this)">
+      <div class="choice-title">Use my own OpenRouter key</div>
+      <div class="choice-sub">One key, access to every major model. Bring your own key, pay OpenRouter directly.</div>
+    </div>
+  </div>
+  <div id="cloud-detail"></div>
+  ${nav()}
+`; }
+
+function selectCloudPath(val, el) {
+  document.querySelectorAll('#setup-card .choice').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected'); cloudPath = val;
+  const det = document.getElementById('cloud-detail');
+  if (val === 'daemon') {
+    det.innerHTML = `<div class="field"><label>Daemon Token</label><input id="s-daemon-token" type="password" placeholder="daemon-xxxxxxxxxxxxxxxx"><div class="hint">From your purchase receipt. Connects to Daemon's managed cloud inference.</div></div>`;
+  } else {
+    cloudProvider = 'openrouter';
+    det.innerHTML = `
+      <div class="field"><label>OpenRouter API Key</label><input id="s-apikey" type="password" placeholder="paste your key here"><div class="hint">Get your key at openrouter.ai/keys — has a free tier with several models.</div></div>
+      <div class="field"><label>Model</label><select id="s-model">
+        <option value="meta-llama/llama-3.2-3b-instruct">Llama 3.2 3B </option>
+        <option value="mistralai/ministral-8b-2512">Ministral 3 8B</option>
+        <option value="openai/gpt-oss-20b">GPT-oss 20B</option>
+        <option value="qwen/qwen3-14b">Qwen 3 14B</option>
+      </select></div>`;
+  }
+}
+
+function stepLocal() { return `
+  <div class="step-track">${pip(TOTAL_STEPS)}</div>
+  <div class="sh">Local AI setup</div>
+  <div class="ss">What are you running your models with?</div>
+  <div class="choices" style="margin-bottom:1rem">
+    <div class="choice ${localPath==='ollama'?'selected':''}" onclick="selectLocalPath('ollama',this)">
+      <div class="choice-title">Ollama</div>
+      <div class="choice-sub">The most popular local AI runner. Daemon can pull a model for you right now.</div>
+    </div>
+    <div class="choice ${localPath==='custom'?'selected':''}" onclick="selectLocalPath('custom',this)">
+      <div class="choice-title">Something else</div>
+      <div class="choice-sub">LM Studio, Jan, LocalAI, or any OpenAI-compatible endpoint. Enter the URL manually.</div>
+    </div>
+  </div>
+  <div id="local-detail"></div>
+  ${nav()}
+`; }
+
+function selectLocalPath(val, el) {
+  document.querySelectorAll('#setup-card .choice').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected'); localPath = val;
+  const det = document.getElementById('local-detail');
+  if (val === 'ollama') {
+    det.innerHTML = `
+      <div class="hint" style="margin-bottom:.75rem" id="ollama-status-msg">Checking if Ollama is running...</div>
+      <div class="model-grid" id="model-grid">${MODELS.map(m=>`
+        <div class="model-card ${selectedModel===m.id?'selected':''}" onclick="selectModel('${m.id}',this)" id="mc-${m.id.replace(':','-')}">
+          <div>
+            <div class="model-name">${m.name} ${m.tag?`<span style="font-size:10px;color:var(--accent);margin-left:6px">${m.tag}</span>`:''}}</div>
+            <div class="model-desc">${m.desc}</div>
+          </div>
+          <div class="model-size">${m.size}</div>
+        </div>`).join('')}
+      </div>
+      <div class="pull-box" id="pull-box"></div>
+      <button class="btn btn-primary" id="pull-btn" style="display:none;margin-bottom:.5rem" onclick="pullModel()">Pull selected model</button>
+      <div class="hint" id="pull-hint"></div>`;
+    checkOllama();
+  } else {
+    det.innerHTML = `
+      <div class="field"><label>API Base URL</label><input id="s-custom-url" placeholder="http://localhost:1234/v1"><div class="hint">LM Studio default: http://localhost:1234/v1 · LocalAI: http://localhost:8080/v1</div></div>
+      <div class="field"><label>API Key (if required)</label><input id="s-custom-key" type="password" placeholder="leave blank if not required"></div>
+      <div class="field"><label>Model name</label><input id="s-custom-model" placeholder="mistral-7b-instruct or whatever your server uses"><div class="hint">Check your server's model list for the exact name.</div></div>`;
+  }
+}
+
+async function checkOllama() {
+  try {
+    const data = await (await fetch(`${API}/api/ollama/status`)).json();
+    const msg = document.getElementById('ollama-status-msg');
+    if (data.running) {
+      msg.innerHTML = `<span style="color:var(--up)">Ollama is running.</span> ${data.models.length ? `Models already installed: ${data.models.join(', ')}` : 'No models pulled yet — pick one below.'}`;
+    } else {
+      msg.innerHTML = `<span style="color:var(--warn)">Ollama not detected.</span> Install it first at <a href="https://ollama.com" target="_blank" style="color:var(--accent)">ollama.com</a> then come back.`;
+    }
+  } catch(e) {}
+}
+
+function selectModel(id, el) {
+  document.querySelectorAll('.model-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected'); selectedModel = id;
+  document.getElementById('pull-btn').style.display = 'block';
+  document.getElementById('pull-hint').textContent = `Will run: ollama pull ${id}`;
+}
+
+async function pullModel() {
+  if (!selectedModel) return;
+  const box = document.getElementById('pull-box');
+  const btn = document.getElementById('pull-btn');
+  const hint = document.getElementById('pull-hint');
+  box.classList.add('active'); box.innerHTML = '';
+  btn.disabled = true; btn.textContent = 'Pulling...';
+
+  const es = new EventSource(`${API}/api/ollama/pull?model=${encodeURIComponent(selectedModel)}`);
+  es.onmessage = e => {
+    const line = e.data;
+    if (line === '__done__') {
+      box.innerHTML += `<div class="pull-done">${selectedModel} ready.</div>`;
+      hint.innerHTML = `<span style="color:var(--up)">Model pulled and ready. Hit Continue.</span>`;
+      btn.textContent = 'Done'; es.close();
+    } else if (line.startsWith('__error__') || line === '__no_ollama__') {
+      box.innerHTML += `<div class="pull-err">Error: ${line}. Check Ollama is installed and running.</div>`;
+      btn.disabled = false; btn.textContent = 'Retry'; es.close();
+    } else if (line) {
+      box.innerHTML += `<div>${line}</div>`;
+      box.scrollTop = box.scrollHeight;
+    }
+  };
+  es.onerror = () => { box.innerHTML += '<div class="pull-err">Connection lost.</div>'; es.close(); btn.disabled=false; btn.textContent='Retry'; };
+}
+
+// step 3 integrations 
+function stepIntegrations() { return `
+  <div class="step-track">${pip(TOTAL_STEPS)}</div>
+  <div class="sh">What should Daemon watch?</div>
+  <div class="ss">Toggle what Daemon can see. Everything is read-only — it never changes anything.</div>
+  <div class="toggle-row">
+    <div><div class="tgl-label">Docker</div><div class="tgl-sub">Containers, images, resource usage</div><div class="tgl-detected">Detected on this machine</div></div>
+    <button class="toggle on" id="t-docker" onclick="this.classList.toggle('on')"></button>
+  </div>
+  <div class="toggle-row">
+    <div><div class="tgl-label">Proxmox</div><div class="tgl-sub">VMs, nodes, cluster status</div></div>
+    <button class="toggle" id="t-proxmox" onclick="this.classList.toggle('on');document.getElementById('pmox-fields').classList.toggle('open')"></button>
+  </div>
+  <div class="collapsible" id="pmox-fields" style="margin-top:.5rem">
+    <div class="field"><label>Host IP</label><input id="s-pmox-host" placeholder="192.168.1.100"></div>
+    <div class="field"><label>User</label><input id="s-pmox-user" placeholder="root@pam" value="root@pam"></div>
+    <div class="field"><label>API Token Name</label><input id="s-pmox-tname" placeholder="daemon"></div>
+    <div class="field"><label>API Token Value</label><input id="s-pmox-tval" type="password" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+  </div>
+  ${nav()}
+`; }
+
+// STEP 4 — Email
+function stepEmail() { return `
+  <div class="step-track">${pip(TOTAL_STEPS)}</div>
+  <div class="sh">Email reminders <span style="font-size:12px;color:var(--muted);font-weight:400">optional</span></div>
+  <div class="ss">Send sticky notes and health summaries to any email. Works with Gmail, Outlook, local Postfix, or any SMTP server. Skip this if you don't need it.</div>
+  <div class="toggle-row" style="margin-bottom:.75rem">
+    <div><div class="tgl-label">Enable email</div><div class="tgl-sub">Send notes and summaries by email</div></div>
+    <button class="toggle" id="t-smtp" onclick="this.classList.toggle('on');document.getElementById('smtp-fields').classList.toggle('open')"></button>
+  </div>
+  <div class="collapsible" id="smtp-fields">
+    <div class="field">
+      <label>Provider preset</label>
+      <select id="s-smtp-preset" onchange="fillSmtp()">
+        <option value="">— pick one or fill in manually —</option>
+        <option value="gmail">Gmail</option>
+        <option value="outlook">Outlook / Hotmail</option>
+        <option value="yahoo">Yahoo Mail</option>
+        <option value="postfix">Local Postfix</option>
+        <option value="custom">Custom SMTP</option>
+      </select>
+    </div>
+    <div class="field"><label>SMTP Host</label><input id="s-smtp-host" placeholder="smtp.gmail.com"></div>
+    <div class="field"><label>Port</label><input id="s-smtp-port" type="number" placeholder="465"></div>
+    <div class="field"><label>Encryption</label>
+      <select id="s-smtp-enc">
+        <option value="ssl">SSL (port 465)</option>
+        <option value="tls">STARTTLS (port 587)</option>
+        <option value="none">None (local relay)</option>
+      </select>
+    </div>
+    <hr class="divider">
+    <div class="field"><label>Username / From address</label><input id="s-smtp-user" placeholder="you@gmail.com"></div>
+    <div class="field"><label>Password</label><input id="s-smtp-pass" type="password" placeholder="leave blank for local Postfix"></div>
+    <div class="field"><label>Send to</label><input id="s-smtp-to" placeholder="you@gmail.com"></div>
+    <div class="hint" id="smtp-hint"></div>
+  </div>
+  ${nav(true, 'Continue')}
+`; }
+function fillSmtp() {
+  const p = SMTP_PRESETS[document.getElementById('s-smtp-preset').value]; if (!p) return;
+  document.getElementById('s-smtp-host').value = p.host;
+  document.getElementById('s-smtp-port').value = p.port;
+  document.getElementById('s-smtp-enc').value = p.enc;
+  document.getElementById('smtp-hint').textContent = p.hint;
+}
+
+// STEP 5 — Done
+function stepDone() { return `
+  <div class="step-track">${pip(TOTAL_STEPS)}</div>
+  <div class="success-icon">D</div>
+  <div style="text-align:center;color:var(--muted);font-size:13px;line-height:2.1">
+    Daemon is ready.<br>
+    <strong style="color:var(--text)">Chat</strong> — ask your homelab anything<br>
+    <strong style="color:var(--text)">Status</strong> — see everything at a glance<br>
+    <strong style="color:var(--text)">Notes</strong> — pin things to remember<br><br>
+    <span style="font-size:11px">Config saved to config.yaml on your machine.</span>
+  </div>
+  <div class="btn-row" style="margin-top:1.5rem">
+    <button class="btn btn-primary" onclick="document.querySelector('.nav-tab').click()">Start chatting</button>
+  </div>
+`; }
+
+// ── NAV ──
+function nextStep() {
+  saveCurrentStep();
+  step = Math.min(step + 1, TOTAL_STEPS);
+  renderSetup();
+}
+function prevStep() { step = Math.max(step-1,0); renderSetup(); }
+
+function saveCurrentStep() {
+  if (step === 0) { cfg.server = { bind: cfg.bind||'127.0.0.1', port: 6789 }; }
+  if (step === 2) {
+    if (aiHost === 'cloud') {
+      if (cloudPath === 'daemon') {
+        cfg.ai = { provider:'openai', api_key: document.getElementById('s-daemon-token')?.value||'', base_url:'https://api.getdaemon.sh/v1', model:'daemon-1' };
+      } else {
+        cfg.ai = { provider: 'openai', api_key: document.getElementById('s-apikey')?.value||'', model: document.getElementById('s-model')?.value||'meta-llama/llama-3.2-8b-instruct', base_url: 'https://openrouter.ai/api/v1' };
+      }
+    } else {
+      if (localPath === 'ollama') {
+        cfg.ai = { provider:'ollama', model: selectedModel||'llama3.2:8b' };
+      } else {
+        cfg.ai = { provider:'openai', base_url: document.getElementById('s-custom-url')?.value||'', api_key: document.getElementById('s-custom-key')?.value||'', model: document.getElementById('s-custom-model')?.value||'' };
+      }
+    }
+  }
+  if (step === 3) {
+    cfg.docker = { enabled: document.getElementById('t-docker')?.classList.contains('on') };
+    const pmox = document.getElementById('t-proxmox')?.classList.contains('on');
+    cfg.proxmox = { enabled: pmox, host: document.getElementById('s-pmox-host')?.value||'', user: document.getElementById('s-pmox-user')?.value||'root@pam', token_name: document.getElementById('s-pmox-tname')?.value||'', token_value: document.getElementById('s-pmox-tval')?.value||'', verify_ssl: false };
+  }
+  if (step === 4) {
+    const on = document.getElementById('t-smtp')?.classList.contains('on');
+    cfg.smtp = { enabled:on, host:document.getElementById('s-smtp-host')?.value||'', port:parseInt(document.getElementById('s-smtp-port')?.value||'465'), encryption:document.getElementById('s-smtp-enc')?.value||'ssl', user:document.getElementById('s-smtp-user')?.value||'', password:document.getElementById('s-smtp-pass')?.value||'', to:document.getElementById('s-smtp-to')?.value||'' };
+    saveConfig();
+  }
+}
+
+async function saveConfig() {
+  try { await fetch(`${API}/api/config`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)}); } catch(e) {}
+}
+
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  if (isDark) {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('daemon-theme', 'light');
+    document.getElementById('theme-btn').textContent = '-';
+  } else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('daemon-theme', 'dark');
+    document.getElementById('theme-btn').textContent = '~';
+  }
+}
+(function() {
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '~' : '-';
+})();
+
+renderSetup();
+</script>
+</body>
+</html>

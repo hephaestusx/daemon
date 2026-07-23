@@ -1,0 +1,30 @@
+ai:
+  api_key: YOUR_KEY_HERE
+  base_url: https://openrouter.ai/api/v1
+  model: mistralai/ministral-8b-2512
+  provider: openai
+bind: 0.0.0.0
+docker:
+  enabled: true
+proxmox:
+  enabled: false
+  host: ''
+  token_name: ''
+  token_value: ''
+  user: root@pam
+  verify_ssl: false
+server:
+  bind: 0.0.0.0
+  port: 6789
+smtp:
+  enabled: false
+  encryption: ssl
+  host: ''
+  password: ''
+  port: 465
+  to: ''
+  user: ''
+truenas:
+  api_key: YOUR_KEY_HERE
+  enabled: false
+  host: 192.168.1.101
