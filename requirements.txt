@@ -1,0 +1,7 @@
+click
+pyyaml
+openai
+anthropic
+docker
+requests
+flask
