@@ -33,6 +33,27 @@ python3 daemon.py serve
 
 Open http://localhost:6789 and complete the setup wizard.
 
+## Run as a service
+ 
+To keep Daemon running in the background and survive reboots:
+ 
+```bash
+# Edit daemon.service and replace YOUR_USERNAME with your username
+nano daemon.service
+ 
+# Install and enable
+sudo cp daemon.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable daemon
+sudo systemctl start daemon
+ 
+# Check it is running
+sudo systemctl status daemon
+ 
+# View logs
+journalctl -u daemon -f
+```
+
 ## Commands
 
 ```bash
