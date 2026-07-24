@@ -27,7 +27,7 @@ You ask a question. Daemon pulls live data from your homelab using read-only API
 git clone https://github.com/hephaestusx/daemon
 cd daemon
 pip3 install -r requirements.txt
-cp config.yaml
+cp confing.example.yaml && config.yaml
 python3 daemon.py serve
 ```
 
