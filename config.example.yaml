@@ -1,0 +1,39 @@
+# Daemon Configuration
+# Copy this to config.yaml and fill in your details.
+# The setup wizard at http://localhost:6789 handles this for you.
+
+ai:
+  provider: openai
+  api_key: YOUR_OPENROUTER_KEY
+  base_url: https://openrouter.ai/api/v1
+  model: meta-llama/llama-3.2-8b-instruct
+
+docker:
+  enabled: true
+  socket: /var/run/docker.sock
+
+proxmox:
+  enabled: false
+  host: 192.168.1.100
+  user: root@pam
+  token_name: daemon
+  token_value: YOUR_TOKEN
+  verify_ssl: false
+
+truenas:
+  enabled: false
+  host: 192.168.1.101
+  api_key: YOUR_KEY_HERE
+
+smtp:
+  enabled: false
+  host: smtp.gmail.com
+  port: 465
+  encryption: ssl
+  user: you@gmail.com
+  password: your-app-password
+  to: you@gmail.com
+
+server:
+  bind: 0.0.0.0
+  port: 6789
